@@ -1,10 +1,14 @@
 import 'dart:convert';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as httpPackage;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:text_highlight/text_highlight.dart';
+import 'package:text_highlight/tools/highlight_theme.dart';
+
 var http = httpPackage.Client();
-bool inProduction = false;
+bool inProduction = true;
 
 void main() {
   runApp(MyApp());
@@ -33,7 +37,7 @@ class HomePage extends StatefulWidget{
 }
 
 class _HomePageStates extends State<HomePage>{
-  var _url = inProduction ? 'server base url' :'http://10.0.2.2:3001/';
+  var _url = inProduction ? 'http://192.168.43.148:3001/' :'http://10.0.2.2:3001/';
   int _uid = 0 ;String _name = '';
   var _dropdownValue;
   var _cookie='';
@@ -125,7 +129,7 @@ class _HomePageStates extends State<HomePage>{
     });
     var data = json.decode(res.body);
     setState(() {
-      _isLoggedIn = json.decode(data['status']);
+      _isLoggedIn = data['status'];
     });
   }
 
@@ -145,8 +149,20 @@ class _HomePageStates extends State<HomePage>{
     });
   }
 
+  optionsDialog(){
+    return Align(alignment: Alignment.topRight, child :RaisedButton(
+      elevation: 10,
+      child: Text('logout',style: TextStyle(fontSize: 25 ),),
+      onPressed: (){
+        _logOutUser();
+        Navigator.pop(context);
+      },
+    ),);
+  }
+
   logInView() {
     return Scaffold(
+      backgroundColor: Color.fromRGBO(50, 50, 50, 1),
       appBar: AppBar(
         title: Text('ChatApp'),
         centerTitle: true,
@@ -158,19 +174,23 @@ class _HomePageStates extends State<HomePage>{
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextFormField(
+                  style: TextStyle(color: Colors.white),
                   controller: _emailController,
                   decoration: InputDecoration(border: OutlineInputBorder(),hintText: 'Email'),
                   validator: (String value){
                     if(value.trim().isEmpty)return 'please Enter Email';
+                    return '';
                   },
                 ),
                 TextFormField(
+                  style: TextStyle(color: Colors.white),
                   controller: _passwordController,
                   obscureText: true,
                   decoration: InputDecoration(border: OutlineInputBorder(),hintText: 'Password'),
                   validator: (String value){
                     if(value.trim().isEmpty)return 'please Enter Password';
                     if(value.length<8)return 'password should be of atleast 8 chracters';
+                    return '';
                   },
                 ),
                 TextButton(
@@ -199,6 +219,7 @@ class _HomePageStates extends State<HomePage>{
 
   signUpView(){
     return Scaffold(
+      backgroundColor: Color.fromRGBO(50, 50, 50, 1),
       appBar: AppBar(
         title: Text('ChatApp'),
         centerTitle: true,
@@ -210,26 +231,32 @@ class _HomePageStates extends State<HomePage>{
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextFormField(
+                  style: TextStyle(color: Colors.white),
                   controller: _nameController,
                   decoration: InputDecoration(border: OutlineInputBorder(),hintText: 'Name'),
                   validator: (String value){
                     if(value.trim().isEmpty)return 'please Enter Name';
+                    return '';
                   },
                 ),
                 TextFormField(
+                  style: TextStyle(color: Colors.white),
                   controller: _emailController,
                   decoration: InputDecoration(border: OutlineInputBorder(),hintText: 'Email'),
                   validator: (String value){
                     if(value.trim().isEmpty)return 'please Enter Email';
+                    return '';
                   },
                 ),
                 TextFormField(
+                  style: TextStyle(color: Colors.white),
                   controller: _passwordController,
                   obscureText: true,
                   decoration: InputDecoration(border: OutlineInputBorder(),hintText: 'Password'),
                   validator: (String value){
                     if(value.trim().isEmpty)return 'please Enter Password';
                     if(value.length<8)return 'password should be of atleast 8 chracters';
+                    return '';
                   },
                 ),
                 TextButton(
@@ -258,6 +285,7 @@ class _HomePageStates extends State<HomePage>{
 
   mainView(){
     return Scaffold(
+        backgroundColor: Color.fromRGBO(50, 50, 50, 1),
       appBar: AppBar(
         leading: Container(
             child: Center(
@@ -281,16 +309,21 @@ class _HomePageStates extends State<HomePage>{
                     elevation: 5,
                     child: Container(
                       height: 120.0,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.red , width: 2),
+                        color: Color.fromRGBO(50, 50, 50, 1)
+                      ),
                       child: Column(
                         children: [
                           Center(
                             child: DropdownButtonFormField(
+                              dropdownColor: Color.fromRGBO(50, 50, 50, 1),
                               value: _dropdownValue=_searchList[0]['user_id'],
                               itemHeight: 100,
                               items: _searchList.map((e){
                                 return DropdownMenuItem(
                                   value: e['user_id'],
-                                  child: Text(e['name'] + '\n '),
+                                  child: Text(e['name'] + '\n ' , style: TextStyle(color: Colors.white),),
                                 );
                               }).toList(),
                               onChanged: (v){
@@ -310,7 +343,7 @@ class _HomePageStates extends State<HomePage>{
                                  }
                                }
                                Navigator.pop(context);
-                               Navigator.push(context, MaterialPageRoute(builder: (context) => ChatViewStateLess( _uid, id, n , _cookie)));
+                               Navigator.push(context, MaterialPageRoute(builder: (context) => ChatViewStateLess( _uid, id, n , _cookie , (){Navigator.pop(context);})));
                              }),
                              IconButton(icon: Icon(Icons.close), onPressed: (){
                                 Navigator.pop(context);
@@ -327,7 +360,10 @@ class _HomePageStates extends State<HomePage>{
           IconButton(
               icon: Icon(Icons.more_vert,color: Colors.blue,),
               onPressed: (){
-                _logOutUser();
+                showDialog(
+                    context: context,
+                  child: optionsDialog(),
+                );
               }
           )
         ],
@@ -338,13 +374,13 @@ class _HomePageStates extends State<HomePage>{
             return Container(
               child: GestureDetector(
                   onTap: (){
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => ChatViewStateLess( _uid, _chatList[i]['uid'], _chatList[i]['name'] , _cookie)));
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => ChatViewStateLess( _uid, _chatList[i]['uid'], _chatList[i]['name'] , _cookie , (){Navigator.pop(context);})));
                   },
                   child:Container(
                     padding: EdgeInsets.all(3),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.black),
-                      color: Color.fromRGBO(200, 200, 200, 1.0)
+                      border: Border.all(color: Colors.grey),
+                      color: Color.fromRGBO(0, 0, 0, 1.0)
                     ),
                     child:Row(
                       mainAxisSize: MainAxisSize.max,
@@ -370,11 +406,11 @@ class _HomePageStates extends State<HomePage>{
                                 children: [
                                   Text(
                                     _chatList[i]['name'],
-                                    style: TextStyle(fontSize: 25),
+                                    style: TextStyle(fontSize: 25 , color: Colors.white),
                                   ),
                                   Text(
                                     'last message',
-                                    style: TextStyle(fontSize: 25),
+                                    style: TextStyle(fontSize: 25 , color: Colors.white),
                                   )
                                 ],
                               ),
@@ -424,12 +460,13 @@ class _HomePageStates extends State<HomePage>{
 class ChatViewStateLess extends StatelessWidget{
   int _uid=0,_pid=0;
   String _name='';
-  var _cookie;
-  ChatViewStateLess(int pid,int id,String name,cookie){
+  var _cookie,_callback;
+  ChatViewStateLess(int pid,int id,String name,cookie,callback){
     _pid = pid;
     _uid = id;
     _name = name;
     _cookie = cookie;
+    _callback = callback;
   }
   @override
   Widget build(BuildContext context) {
@@ -440,7 +477,7 @@ class ChatViewStateLess extends StatelessWidget{
         primarySwatch: Colors.green,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: ChatView(_pid,_uid,_name,_cookie),
+      home: ChatView(_pid,_uid,_name,_cookie,_callback),
     );
   }
 
@@ -448,18 +485,19 @@ class ChatViewStateLess extends StatelessWidget{
 
 
 class ChatView extends StatefulWidget{
-  int _uid,_pid;String _name='';
+  int _uid,_pid;String _name='';var _callback;
   var _cookie;
-  ChatView(int pid,int uid,String name, cookie, {Key key}) : _pid=pid,_uid=uid,_name=name,_cookie = cookie,super(key: key);
+  ChatView(int pid,int uid,String name, cookie, callback, {Key key}) : _pid=pid,_uid=uid,_name=name,_cookie = cookie,_callback = callback,super(key: key);
   @override
-  _ChatViewStates createState() => _ChatViewStates(_pid,_uid,_name , _cookie);
+  _ChatViewStates createState() => _ChatViewStates(_pid,_uid,_name , _cookie , _callback);
 }
 
 class _ChatViewStates extends State<ChatView>{
-  var _url = inProduction ? 'server base url' :'http://10.0.2.2:3001/';
+  var _url = inProduction ? 'http://192.168.43.148:3001/' :'http://10.0.2.2:3001/';
   int _uid,_pid;String _name='',_pName;
   var _chats=[];
-  var _cookie;
+  var _cookie,_callback;
+  double screenWidth ;
   TextEditingController _messaggeController = TextEditingController();
 
   _getChats()async{
@@ -509,40 +547,42 @@ class _ChatViewStates extends State<ChatView>{
     });
   }
 
-  _ChatViewStates(int pid,int uid,String name,cookie){
+  _ChatViewStates(int pid,int uid,String name,cookie,callback){
     _pid = pid;
     _uid =uid;
     _name = name;
     _cookie = cookie;
     _getUserData();
+    _callback = callback;
   }
 
   messageView(data){
     return Align(
       alignment: data['to_id']==_uid ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
+        constraints: BoxConstraints(maxWidth: screenWidth*0.9),
         padding: EdgeInsets.all(1),
         margin: EdgeInsets.all(1),
         decoration: BoxDecoration(
           border: Border.all(color: Colors.red),
           borderRadius: BorderRadius.horizontal(left: Radius.circular(5.0) , right: Radius.circular(5.0)),
-          color: Colors.lightGreen
+          color: Color.fromRGBO(20, 20, 20, 1)
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              child: Text(data['to_id']==_uid ? _pName : _name , style: TextStyle( fontWeight: FontWeight.bold),),
+              child: Text(data['to_id']==_uid ? _pName : _name , style: TextStyle( fontWeight: FontWeight.bold , color: Colors.white),),
             ),
             Stack(
               alignment: Alignment.bottomRight,
               children: [
+                   Container(
+                    child: HighlightText(data['msg']+'\n  ' , mode: HighlightTextModes.AUTO,),
+                  ),
                 Container(
-                  child: Text(data['msg']+'\n  ' , style: TextStyle(),),
-                ),
-                Container(
-                  child: Text(data['msgtime'] , style: TextStyle(fontSize: 10),),
+                  child: Text(data['msgtime'] , style: TextStyle(fontSize: 10 , color: Colors.red),),
                 )
               ],
             )
@@ -554,21 +594,37 @@ class _ChatViewStates extends State<ChatView>{
 
   @override
   Widget build(BuildContext context){
+    screenWidth = MediaQuery.of(context).size.width;
     _getChats();
     return Scaffold(
+      backgroundColor: Color.fromRGBO(50, 50, 50, 1),
       appBar: AppBar(
         leading: Container(
             child: Center(
               child:
-              IconButton(
-                icon: Icon(
-                  Icons.person_rounded,
-                  color: Colors.blue,
+                IconButton(
+                  icon: Icon(
+                    Icons.arrow_back,
+                    color: Colors.blue,
+                  ),
+                  onPressed: (){
+                    _callback();
+                  },
                 ),
-              ),
-            )
+              )
         ),
-        title: Text(_name,style: TextStyle(fontWeight: FontWeight.bold),),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            IconButton(
+              icon: Icon(
+                Icons.person_rounded,
+                color: Colors.blue,
+              ),
+            ),
+            Text(_name,style: TextStyle(fontWeight: FontWeight.bold),),
+          ],
+        ) ,
         actions: [
           IconButton(
               icon: Icon(Icons.more_vert,color: Colors.blue,),
@@ -589,20 +645,32 @@ class _ChatViewStates extends State<ChatView>{
           Expanded(
             flex: 1,
               child: Container(
+                padding: EdgeInsets.all(5),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.black , width: 2),
+                  border: Border.all(color: Colors.transparent, width: 2),
+                  color: Colors.black45
                 ),
                 child: Row(
                   children: [
                     Expanded(
                         flex:4,
                         child: Container(
+                          height: 100,
                           decoration: BoxDecoration(
-                              border: Border.all(width: 1,color: Colors.grey),
+                              border: Border.all(width: 1,color: Colors.black),
                               borderRadius: BorderRadius.horizontal(left: Radius.circular(10),right: Radius.circular(10))
                           ),
                           child: TextField(
+                            style: TextStyle(color: Colors.white , fontSize: 20),
+                            decoration: InputDecoration(
+                              hintText: 'Enter Message here',
+                              hintStyle: TextStyle(color: Colors.white , fontSize: 15),
+                              border: InputBorder.none
+                            ),
                             controller: _messaggeController,
+                            minLines: 1,
+                            maxLines: 1000,
+                            textInputAction: TextInputAction.newline,
                           ),
                         )
                     ),
