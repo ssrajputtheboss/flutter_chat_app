@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
@@ -285,7 +286,7 @@ class _HomePageStates extends State<HomePage>{
 
   mainView(){
     return Scaffold(
-        backgroundColor: Color.fromRGBO(50, 50, 50, 1),
+        backgroundColor: Color.fromRGBO(0, 0, 0, 1),
       appBar: AppBar(
         leading: Container(
             child: Center(
@@ -379,8 +380,8 @@ class _HomePageStates extends State<HomePage>{
                   child:Container(
                     padding: EdgeInsets.all(3),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      color: Color.fromRGBO(0, 0, 0, 1.0)
+                      border: i==(_chatList.length-1)? Border() : Border(bottom: BorderSide(color: Color.fromRGBO(0,75, 0, 1) )),
+                      color: Color.fromRGBO(0, 30, 30, 1.0)
                     ),
                     child:Row(
                       mainAxisSize: MainAxisSize.max,
@@ -406,11 +407,13 @@ class _HomePageStates extends State<HomePage>{
                                 children: [
                                   Text(
                                     _chatList[i]['name'],
+                                    maxLines: 1,
                                     style: TextStyle(fontSize: 25 , color: Colors.white),
                                   ),
                                   Text(
-                                    'last message',
-                                    style: TextStyle(fontSize: 25 , color: Colors.white),
+                                    _chatList[i]['lastmsg'] ==null ?  '' :_chatList[i]['lastmsg'],
+                                    maxLines: 1,
+                                    style: TextStyle(fontSize: 20 , color: Colors.white),
                                   )
                                 ],
                               ),
@@ -499,6 +502,7 @@ class _ChatViewStates extends State<ChatView>{
   var _cookie,_callback;
   double screenWidth ;
   TextEditingController _messaggeController = TextEditingController();
+  ScrollController _scrollController = ScrollController();
 
   _getChats()async{
     var res = await http.post(_url+'chats',
@@ -554,6 +558,37 @@ class _ChatViewStates extends State<ChatView>{
     _cookie = cookie;
     _getUserData();
     _callback = callback;
+    Future.delayed(Duration(seconds: 2) , (){
+      try{
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      }catch(err){}
+    });
+  }
+
+  String stringTime(String dateString){
+    DateTime date = DateTime.parse(dateString);
+    DateTime now = DateTime.now();
+    Duration timestamp = now.difference(date);
+    if(timestamp.inHours < 24){
+      if(timestamp.inSeconds < 60)
+        return 'Just Now';
+      else if(timestamp.inMinutes < 60)
+        return timestamp.inMinutes.toString() + 'minute${timestamp.inMinutes<2?'':'s'} ago';
+      return timestamp.inHours.toString() + 'hour${timestamp.inHours<2?'':'s'} ago';
+    }else{
+      if(timestamp.inDays < 7)
+        return timestamp.inDays.toString() + 'day${timestamp.inDays<2?'':'s'} ago';
+      else if(timestamp.inDays < 30){
+        int weeks = timestamp.inDays ~/ 7;
+        return weeks.toString() + 'week${weeks<2?'':'s'} ago';
+      }else if(timestamp.inDays < 365){
+        int months = timestamp.inDays ~/ 30;
+        return months.toString() + 'month${months<2?'':'s'} ago';
+      }else{
+        int years = timestamp.inDays ~/ 365;
+        return years.toString() + 'year${years<2?'':'s'} ago';
+      }
+    }
   }
 
   messageView(data){
@@ -561,11 +596,11 @@ class _ChatViewStates extends State<ChatView>{
       alignment: data['to_id']==_uid ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         constraints: BoxConstraints(maxWidth: screenWidth*0.9),
-        padding: EdgeInsets.all(1),
+        padding: EdgeInsets.all(10),
         margin: EdgeInsets.all(1),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.red),
-          borderRadius: BorderRadius.horizontal(left: Radius.circular(5.0) , right: Radius.circular(5.0)),
+          //border: Border.all(color: Colors.yellow),
+          borderRadius: BorderRadius.horizontal(left: Radius.circular(25.0) , right: Radius.circular(25.0)),
           color: Color.fromRGBO(20, 20, 20, 1)
         ),
         child: Column(
@@ -573,7 +608,7 @@ class _ChatViewStates extends State<ChatView>{
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              child: Text(data['to_id']==_uid ? _pName : _name , style: TextStyle( fontWeight: FontWeight.bold , color: Colors.white),),
+              child: Text(data['to_id']==_uid ? 'You' : _name , style: TextStyle( fontWeight: FontWeight.bold , color: data['to_id']==_uid ? Color.fromRGBO(180, 0, 180, 1) : Color.fromRGBO(0, 180, 180, 1)),),
             ),
             Stack(
               alignment: Alignment.bottomRight,
@@ -582,7 +617,7 @@ class _ChatViewStates extends State<ChatView>{
                     child: HighlightText(data['msg']+'\n  ' , mode: HighlightTextModes.AUTO,),
                   ),
                 Container(
-                  child: Text(data['msgtime'] , style: TextStyle(fontSize: 10 , color: Colors.red),),
+                  child: Text(stringTime(data['msgtime']) , style: TextStyle(fontSize: 10 , fontWeight: FontWeight.w300, color: Colors.yellow,)),
                 )
               ],
             )
@@ -596,7 +631,7 @@ class _ChatViewStates extends State<ChatView>{
   Widget build(BuildContext context){
     screenWidth = MediaQuery.of(context).size.width;
     _getChats();
-    return Scaffold(
+     return Scaffold(
       backgroundColor: Color.fromRGBO(50, 50, 50, 1),
       appBar: AppBar(
         leading: Container(
@@ -637,6 +672,7 @@ class _ChatViewStates extends State<ChatView>{
           Expanded(
             flex: 8,
               child: ListView.builder(
+                controller: _scrollController,
                 itemCount: _chats.length,
                   itemBuilder: (context,i){
                 return messageView(_chats[i]);
