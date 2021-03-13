@@ -4,7 +4,7 @@ A flutter chat application. Server side coding is uploaded [here](https://github
 
 ## ScreenShotsgit
 
-![ss1](https://github.com/ssrajputtheboss/flutter_chat_app/blob/main/screenshots/Screenshot_1613903526.png)
+![ss1](https://github.com/ssrajputtheboss/flutter_chat_app/blob/main/screenshots/Screenshot_1613903536.png)
 ![ss2](https://github.com/ssrajputtheboss/flutter_chat_app/blob/main/screenshots/Screenshot_1613903536.jpg)
 ![ss3](https://github.com/ssrajputtheboss/flutter_chat_app/blob/main/screenshots/Screenshot_1613903568.jpg)
 ![ss4](https://github.com/ssrajputtheboss/flutter_chat_app/blob/main/screenshots/Screenshot_1613904000.png)
