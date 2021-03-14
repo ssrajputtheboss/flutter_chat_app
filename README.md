@@ -2,7 +2,7 @@
 
 A flutter chat application. Server side coding is uploaded [here](https://github.com/ssrajputtheboss/FlutterChatApp-backend-code)
 
-## ScreenShotsgit
+## ScreenShots
 
 ![ss1](https://github.com/ssrajputtheboss/flutter_chat_app/blob/main/screenshots/Screenshot_1613903536.png)
 ![ss2](https://github.com/ssrajputtheboss/flutter_chat_app/blob/main/screenshots/Screenshot_1613903536.jpg)

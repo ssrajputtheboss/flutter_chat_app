@@ -175,6 +175,9 @@ class _HomePageStates extends State<HomePage>{
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextFormField(
+                  maxLines: 1,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
                   style: TextStyle(color: Colors.white),
                   controller: _emailController,
                   decoration: InputDecoration(border: OutlineInputBorder(),hintText: 'Email'),
@@ -186,6 +189,7 @@ class _HomePageStates extends State<HomePage>{
                 TextFormField(
                   style: TextStyle(color: Colors.white),
                   controller: _passwordController,
+                  textInputAction: TextInputAction.next,
                   obscureText: true,
                   decoration: InputDecoration(border: OutlineInputBorder(),hintText: 'Password'),
                   validator: (String value){
@@ -681,6 +685,7 @@ class _ChatViewStates extends State<ChatView>{
           Expanded(
             flex: 1,
               child: Container(
+                height: 200,
                 padding: EdgeInsets.all(5),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.transparent, width: 2),
@@ -696,23 +701,28 @@ class _ChatViewStates extends State<ChatView>{
                               border: Border.all(width: 1,color: Colors.black),
                               borderRadius: BorderRadius.horizontal(left: Radius.circular(10),right: Radius.circular(10))
                           ),
-                          child: TextField(
-                            style: TextStyle(color: Colors.white , fontSize: 20),
-                            decoration: InputDecoration(
-                              hintText: 'Enter Message here',
-                              hintStyle: TextStyle(color: Colors.white , fontSize: 15),
-                              border: InputBorder.none
+                          child: Center(
+                              child:TextField(
+                              style: TextStyle(color: Colors.white , fontSize: 20),
+                              keyboardType: TextInputType.multiline,
+                              decoration: InputDecoration(
+                                isCollapsed: true,
+                                hintText: 'Enter Message here',
+                                hintStyle: TextStyle(color: Colors.white , fontSize: 15),
+                                border: InputBorder.none
+                              ),
+                              controller: _messaggeController,
+                              minLines: 1,
+                              maxLines: 1000,
+                              textInputAction: TextInputAction.newline,
                             ),
-                            controller: _messaggeController,
-                            minLines: 1,
-                            maxLines: 1000,
-                            textInputAction: TextInputAction.newline,
-                          ),
+                          )
                         )
                     ),
                     Expanded(
                         flex: 1,
                         child: IconButton(
+                          iconSize: 25,
                           icon: Icon(Icons.send , color: Colors.indigo,),
                           onPressed: (){
                             sendMessage(_messaggeController.text);
