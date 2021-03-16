@@ -11,20 +11,47 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_chat_app/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  testWidgets('SignUp button click test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(MyApp());
 
     // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('Login'), findsOneWidget);
+    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
+    expect(find.text('SignUp'), findsOneWidget);
+    expect(find.text('Name'), findsNothing);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    // Tap SignUp button
+    await tester.tap(find.text('SignUp'));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    //verification of movement to next page
+    expect(find.text('LogIn'), findsOneWidget);
+    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
+    expect(find.text('SignUp'), findsOneWidget);
+    expect(find.text('Name'), findsOneWidget);
   });
+  /*testWidgets('Login test', (WidgetTester tester) async {
+    // Build our app and trigger a frame.
+    await tester.pumpWidget(MyApp());
+
+    // check if Login button , Email , Password are there
+    expect(find.text('Login'), findsOneWidget);
+    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
+
+    // input email password
+    await tester.tap(find.text('Email'));
+    await tester.enterText( find.widgetWithText( TextFormField , 'Email') , '');
+    //await tester.pump();
+    await tester.tap(find.text('Password'));
+    await tester.enterText( find.widgetWithText( TextFormField , 'Password') , '');
+    await tester.tap(find.widgetWithText( TextButton, 'Login') );
+    //await tester.pump();
+
+    // checking if homepage appeared
+    //expect(find.text('new'), findsOneWidget);
+  });*/
 }

@@ -1,8 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_chat_app/states/chat_data.dart';
+import 'package:flutter_chat_app/states/chat_state_controller.dart';
+import 'package:get/get_navigation/get_navigation.dart';
+import 'package:get/route_manager.dart';
 import 'package:http/http.dart' as httpPackage;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:text_highlight/text_highlight.dart';
@@ -12,14 +17,22 @@ var http = httpPackage.Client();
 bool inProduction = true;
 
 void main() {
-  runApp(MyApp());
+  runApp(GetMaterialApp(title: 'Flutter ChatApp',
+    debugShowCheckedModeBanner: false,
+    theme: ThemeData(
+      primarySwatch: Colors.green,
+      primaryColor: Color.fromRGBO(20, 20, 20, 1),
+      visualDensity: VisualDensity.adaptivePlatformDensity,
+    ),
+    home: HomePage(),
+  ));
 }
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Flutter ChatApp',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.green,
@@ -37,58 +50,52 @@ class HomePage extends StatefulWidget{
   _HomePageStates createState() => _HomePageStates();
 }
 
-class _HomePageStates extends State<HomePage>{
-  var _url = inProduction ? 'http://192.168.43.148:3001/' :'http://10.0.2.2:3001/';
-  int _uid = 0 ;String _name = '';
-  var _dropdownValue;
-  var _cookie='';
-  var _isLoggedIn=false , _toggleLoginSignup =true;
-  var _chatList = [] , _searchList = [];
-  TextEditingController _emailController= TextEditingController(), _passwordController=TextEditingController(),_nameController=TextEditingController();
 
+class _HomePageStates extends State<HomePage>{
+  var _url = inProduction ? 'server address' :'http://10.0.2.2:3001/';
+  var _dropdownValue;
+  var _isLoggedIn=false , _toggleLoginSignup =true;
+  var _searchList = [];
+  ChatData _chatData  = ChatData();
+  TextEditingController _emailController= TextEditingController(), _passwordController=TextEditingController(),_nameController=TextEditingController();
   _saveCookie()async{
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-    sharedPreferences.setString('cookie', _cookie);
+    sharedPreferences.setString('cookie', _chatData.getCookie);
   }
 
   _getCookie()async{
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-    _cookie = sharedPreferences.get('cookie') ?? '';
+    _chatData.cookie = sharedPreferences.get('cookie') ?? '';
   }
 
   getChatList()async{
     var res = await http.post(_url+'chatlist',headers: {
       'Content-type': 'application/json; charset=UTF-8',
-      'cookie' : _cookie
+      'cookie' : _chatData.getCookie
     });
-    var data = json.decode(res.body);
-    setState(() {
-      _chatList = data['chatlist'];
-    });
+    return res;
   }
 
   _getSearchList()async{
     var res = await http.post(_url+'searchlist',headers: {
       'Content-type': 'application/json; charset=UTF-8',
-      'cookie' : _cookie
+      'cookie' : _chatData.getCookie
     });
-    var data = json.decode(res.body);
-    setState(() {
-      _searchList = data['searchlist'];
-    });
+    return res;
   }
 
   setUser()async{
     var res = await http.post(_url+'userdata',headers: {
       'Content-type': 'application/json; charset=UTF-8',
-      'cookie' : _cookie
+      'cookie' : _chatData.getCookie
     });
     var data = json.decode(res.body);
     setState(() {
-      _uid =  data['user_id'];
-      _name = data['name'];
+      _chatData.currentUserId =  data['user_id'];
+      _chatData.currentUserName = data['name'];
     });
   }
+
 
   _logInUser()async{
     var email = _emailController.text,password = _passwordController.text;
@@ -100,16 +107,11 @@ class _HomePageStates extends State<HomePage>{
           'Content-type':'application/json; charset=UTF-8'
         }
     );
-    /*var res = await http.post(_url+'login',body: json.encode({
-      'email':email,
-      'password':password,
-    }),headers:{
-      'Content-type':'application/json; charset=UTF-8'
-    });*/
+
     var data = json.decode(res.body);
     setState(() {
       _isLoggedIn = data['status'];
-      _cookie = res.headers['set-cookie'];
+      _chatData.cookie = res.headers['set-cookie'];
       _saveCookie();
       if(_isLoggedIn){
         setUser();
@@ -137,28 +139,58 @@ class _HomePageStates extends State<HomePage>{
   _logOutUser()async{
     var res = await http.post(_url+'logout',headers: {
       'Content-type': 'application/json; charset=UTF-8',
-      'cookie' : _cookie
+      'cookie' : _chatData.getCookie
     });
     var data = json.decode(res.body);
     setState(() {
-      _chatList = [];
       _searchList = [];
-      _uid = 0;
-      _name = '';
-      _cookie = '';
+      _chatData.currentUserId = 0;
+      _chatData.currentUserName = '';
+      _chatData.cookie = '';
       _isLoggedIn = false;
     });
   }
 
+  showNormalSnackBar(BuildContext context , String text){
+    var snackBar = SnackBar(
+        content: Text(text , style: TextStyle(color: Colors.white),),
+      backgroundColor: Color.fromRGBO(20, 20, 20, 1),
+
+    );
+    Scaffold.of(context).showSnackBar(snackBar);
+  }
+
+  showActionSnackBar(BuildContext context , String text , String actionText , void Function() onAction){
+    var snackBar = SnackBar(
+      content: Text(text , style: TextStyle(color: Colors.white),),
+      backgroundColor: Color.fromRGBO(20, 20, 20, 1),
+      action: SnackBarAction(label: actionText, textColor: Colors.red, onPressed: onAction),
+    );
+    Scaffold.of(context).showSnackBar(snackBar);
+  }
+
   optionsDialog(){
-    return Align(alignment: Alignment.topRight, child :RaisedButton(
-      elevation: 10,
-      child: Text('logout',style: TextStyle(fontSize: 25 ),),
-      onPressed: (){
-        _logOutUser();
-        Navigator.pop(context);
-      },
-    ),);
+    return AlertDialog(
+      backgroundColor: Color.fromRGBO(0, 0, 20, 1),
+      content: Text('Are you sure you want to log out?',style: TextStyle(color: Colors.white,fontSize: 25 ),),
+      actions: [
+        FlatButton(
+          child: Text('cancel',style: TextStyle(color: Colors.yellow,),),
+          onPressed: (){
+            Get.back();
+            //Navigator.pop(context);
+          },
+        ),
+        FlatButton(
+          child: Text('logout',style: TextStyle(color: Colors.red,),),
+          onPressed: (){
+            _logOutUser();
+            Get.back();
+            //Navigator.pop(context);
+          },
+        )
+      ],
+    );
   }
 
   logInView() {
@@ -229,205 +261,246 @@ class _HomePageStates extends State<HomePage>{
         title: Text('ChatApp'),
         centerTitle: true,
       ),
-      body: Center(
-        child: Container(
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  style: TextStyle(color: Colors.white),
-                  controller: _nameController,
-                  decoration: InputDecoration(border: OutlineInputBorder(),hintText: 'Name'),
-                  validator: (String value){
-                    if(value.trim().isEmpty)return 'please Enter Name';
-                    return '';
-                  },
-                ),
-                TextFormField(
-                  style: TextStyle(color: Colors.white),
-                  controller: _emailController,
-                  decoration: InputDecoration(border: OutlineInputBorder(),hintText: 'Email'),
-                  validator: (String value){
-                    if(value.trim().isEmpty)return 'please Enter Email';
-                    return '';
-                  },
-                ),
-                TextFormField(
-                  style: TextStyle(color: Colors.white),
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: InputDecoration(border: OutlineInputBorder(),hintText: 'Password'),
-                  validator: (String value){
-                    if(value.trim().isEmpty)return 'please Enter Password';
-                    if(value.length<8)return 'password should be of atleast 8 chracters';
-                    return '';
-                  },
-                ),
-                TextButton(
-                    onPressed: _signUpUser,
-                    child: Text(
-                      'SignUp',
+      body: Builder(
+        builder: (context){
+          return Center(
+            child: Container(
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      style: TextStyle(color: Colors.white),
+                      controller: _nameController,
+                      decoration: InputDecoration(border: OutlineInputBorder(),hintText: 'Name'),
+                      validator: (String value){
+                        if(value.trim().isEmpty)return 'please Enter Name';
+                        return '';
+                      },
+                    ),
+                    TextFormField(
+                      style: TextStyle(color: Colors.white),
+                      controller: _emailController,
+                      decoration: InputDecoration(border: OutlineInputBorder(),hintText: 'Email'),
+                      validator: (String value){
+                        if(value.trim().isEmpty)return 'please Enter Email';
+                        return '';
+                      },
+                    ),
+                    TextFormField(
+                      style: TextStyle(color: Colors.white),
+                      controller: _passwordController,
+                      obscureText: true,
+                      decoration: InputDecoration(border: OutlineInputBorder(),hintText: 'Password'),
+                      validator: (String value){
+                        if(value.trim().isEmpty)return 'please Enter Password';
+                        if(value.length<8)return 'password should be of at least 8 characters';
+                        return '';
+                      },
+                    ),
+                    TextButton(
+                        onPressed: ()async{
+                          await _signUpUser();
+                          if(_isLoggedIn)
+                            showActionSnackBar(context, 'Sign Up Successful ', 'Log In', () {setUser(){{_toggleLoginSignup=true; }}});
+                          else
+                            showNormalSnackBar(context, "Can't sign up");
+                        },
+                        child: Text(
+                          'SignUp',
+                        )
+                    ),
+                    TextButton(
+                        onPressed: (){
+                          setState(() {
+                            _toggleLoginSignup=!_toggleLoginSignup;
+                          });
+                        },
+                        child: Text(
+                          'LogIn',
+                        )
                     )
+                  ],
                 ),
-                TextButton(
-                    onPressed: (){
-                      setState(() {
-                        _toggleLoginSignup=!_toggleLoginSignup;
-                      });
-                    },
-                    child: Text(
-                      'LogIn',
-                    )
-                )
-              ],
+              ),
             ),
-          ),
-        ),
-      ),
+          );
+        },
+      )
     );
   }
-
   mainView(){
     return Scaffold(
         backgroundColor: Color.fromRGBO(0, 0, 0, 1),
-      appBar: AppBar(
-        leading: Container(
-            child: Center(
-              child:
-              IconButton(
-                icon: Icon(
+        appBar: AppBar(
+          leading: Container(
+              child: Center(
+                child:
+                IconButton(
+                  icon: Icon(
                     Icons.person_rounded,
-                  color: Colors.blue,
+                    color: Colors.blue,
+                  ),
                 ),
-              ),
-            )
-        ),
-        title: Text('ChatApp'),
-        actions: [
-          IconButton(
-              icon: Icon(Icons.search_outlined,color: Colors.blue,),
-              onPressed: (){
-                showDialog(
-                  context: context,
-                  child: Dialog(
-                    elevation: 5,
-                    child: Container(
-                      height: 120.0,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.red , width: 2),
-                        color: Color.fromRGBO(50, 50, 50, 1)
-                      ),
-                      child: Column(
-                        children: [
-                          Center(
-                            child: DropdownButtonFormField(
-                              dropdownColor: Color.fromRGBO(50, 50, 50, 1),
-                              value: _dropdownValue=_searchList[0]['user_id'],
-                              itemHeight: 100,
-                              items: _searchList.map((e){
-                                return DropdownMenuItem(
-                                  value: e['user_id'],
-                                  child: Text(e['name'] + '\n ' , style: TextStyle(color: Colors.white),),
-                                );
-                              }).toList(),
-                              onChanged: (v){
-                                _dropdownValue = v;
-                              },
-                            ),
-                          ),
-                         Row(
-                           mainAxisAlignment: MainAxisAlignment.spaceAround,
-                           children: [
-                             IconButton(icon: Icon(Icons.send_rounded), onPressed: (){
-                               var id = _dropdownValue,n;
-                               for(var e in _searchList){
-                                 if(e['user_id']== id){
-                                   n=e['name'];
-                                   break;
-                                 }
-                               }
-                               Navigator.pop(context);
-                               Navigator.push(context, MaterialPageRoute(builder: (context) => ChatViewStateLess( _uid, id, n , _cookie , (){Navigator.pop(context);})));
-                             }),
-                             IconButton(icon: Icon(Icons.close), onPressed: (){
-                                Navigator.pop(context);
-                             })
-                           ],
-                         )
-                        ],
-                      ),
-                    )
-                  )
-                );
-              }
+              )
           ),
-          IconButton(
-              icon: Icon(Icons.more_vert,color: Colors.blue,),
-              onPressed: (){
-                showDialog(
-                    context: context,
-                  child: optionsDialog(),
-                );
-              }
-          )
-        ],
-      ),
-      body: ListView.builder(
-          itemCount: _chatList.length,
-          itemBuilder: (BuildContext context,int i){
-            return Container(
-              child: GestureDetector(
-                  onTap: (){
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => ChatViewStateLess( _uid, _chatList[i]['uid'], _chatList[i]['name'] , _cookie , (){Navigator.pop(context);})));
-                  },
-                  child:Container(
-                    padding: EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      border: i==(_chatList.length-1)? Border() : Border(bottom: BorderSide(color: Color.fromRGBO(0,75, 0, 1) )),
-                      color: Color.fromRGBO(0, 30, 30, 1.0)
-                    ),
-                    child:Row(
-                      mainAxisSize: MainAxisSize.max,
-                      //mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Center(
+          title: Text('ChatApp'),
+          actions: [
+            IconButton(
+                icon: Icon(Icons.search_outlined,color: Colors.blue,),
+                onPressed: (){
+                  showDialog(
+                      context: context,
+                      child: Dialog(
+                          elevation: 5,
                           child: Container(
-                            padding: EdgeInsets.all(1),
-                            child:IconButton(
-                              icon: Icon(
-                                  Icons.person_rounded,
-                                size: 40,
-                                color: Colors.blue,
-                              ),
+                            height: 120.0,
+                            decoration: BoxDecoration(
+                                border: Border.all(color: Colors.red , width: 2),
+                                color: Color.fromRGBO(50, 50, 50, 1)
+                            ),
+                            child:FutureBuilder(
+                                future: _getSearchList(),
+                                builder: (context,searchListState){
+                                  if(searchListState.connectionState == ConnectionState.none || !searchListState.hasData || searchListState.hasError){
+                                    return LinearProgressIndicator();
+                                  }else{
+                                    var searchList = json.decode(searchListState.data.body)['searchlist'];
+                                    return Column(
+                                        children: [
+                                          Center(
+                                                  child: DropdownButtonFormField(
+                                                    dropdownColor: Color.fromRGBO(50, 50, 50, 1),
+                                                    value: _dropdownValue = searchList[0]['user_id'],
+                                                    itemHeight: 100,
+                                                    items: searchList.map<DropdownMenuItem>((e){
+                                                      return DropdownMenuItem(
+                                                        value: e['user_id'],
+                                                        child: Text(e['name'] + '\n ' , style: TextStyle(color: Colors.white),),
+                                                      );
+                                                    }).toList(),
+                                                    onChanged: (v){
+                                                      _dropdownValue = v;
+                                                    },
+                                                  )
+                                          ),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                            children: [
+                                              IconButton(icon: Icon(Icons.send_rounded), onPressed: (){
+                                                var id = _dropdownValue,n;
+                                                for(var e in searchList){
+                                                  if(e['user_id']== id){
+                                                    n=e['name'];
+                                                    break;
+                                                  }
+                                                }
+                                                Get.back();
+                                                _chatData.roomId = id;
+                                                _chatData.roomName = n;
+                                                Get.to(()=>ChatView( _chatData ),);
+                                                //Navigator.pop(context);
+                                                //Navigator.push(context, MaterialPageRoute(builder: (context) => ChatViewStateLess( _uid, id, n , _cookie , (){Navigator.pop(context);})));
+                                              }),
+                                              IconButton(icon: Icon(Icons.close), onPressed: (){
+                                                Get.back();
+                                                //Navigator.pop(context);
+                                              })
+                                            ],
+                                          )
+                                        ],
+                                      );
+                                  }
+                              }
                             ),
                           )
-                        ),
-                        Expanded(
-                            child: Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                      )
+                  );
+                }
+            ),
+            IconButton(
+                icon: Icon(Icons.logout,color: Colors.blue,),
+                onPressed: (){
+                  showDialog(
+                    context: context,
+                    child: optionsDialog(),
+                  );
+                }
+            )
+          ],
+        ),
+        body:FutureBuilder(
+          future: getChatList(),
+          builder: (context,chatListState){
+            if(chatListState.connectionState == ConnectionState.none || !chatListState.hasData || chatListState.hasError){
+              return Center(
+                child: CircularProgressIndicator(),
+              );
+            }else{
+              var chatList = json.decode(chatListState.data.body)['chatlist'];
+              return ListView.builder(
+                  itemCount: chatList.length,
+                  itemBuilder: (BuildContext context,int i){
+                    return Container(
+                        child: GestureDetector(
+                            onTap: (){
+                              _chatData.roomId = chatList[i]['uid'];
+                              _chatData.roomName = chatList[i]['name'];
+                              Get.to(()=>ChatView( _chatData));
+                              //Navigator.push(context, MaterialPageRoute(builder: (context) => ChatViewStateLess( _uid, chatList[i]['uid'], chatList[i]['name'] , _cookie , (){Navigator.pop(context);})));
+                            },
+                            child:Container(
+                              padding: EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                  border: i==(chatList.length-1)? Border() : Border(bottom: BorderSide(color: Color.fromRGBO(0,75, 0, 1) )),
+                                  color: Color.fromRGBO(0, 30, 30, 1.0)
+                              ),
+                              child:Row(
                                 mainAxisSize: MainAxisSize.max,
+                                //mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    _chatList[i]['name'],
-                                    maxLines: 1,
-                                    style: TextStyle(fontSize: 25 , color: Colors.white),
+                                  Center(
+                                      child: Container(
+                                        padding: EdgeInsets.all(1),
+                                        child:
+                                        IconButton(
+                                          iconSize: 30,
+                                          icon: Icon(
+                                            Icons.person_rounded,
+                                            color: Colors.blue,
+                                          ),
+                                        ),
+                                      )
                                   ),
-                                  Text(
-                                    _chatList[i]['lastmsg'] ==null ?  '' :_chatList[i]['lastmsg'],
-                                    maxLines: 1,
-                                    style: TextStyle(fontSize: 20 , color: Colors.white),
+                                  Expanded(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.max,
+                                      children: [
+                                        Text(
+                                          chatList[i]['name'],
+                                          maxLines: 1,
+                                          style: TextStyle(fontSize: 25 , color: Colors.white),
+                                        ),
+                                        Text(
+                                          chatList[i]['lastmsg'] ==null ?  '' :chatList[i]['lastmsg'],
+                                          maxLines: 1,
+                                          style: TextStyle(fontSize: 20 , color: Colors.white),
+                                        )
+                                      ],
+                                    ),
                                   )
                                 ],
                               ),
                             )
-                      ],
-                    ),
-                  )
-              )
-            );
-      })
+                        )
+                    );
+                  });
+            }
+          },
+
+        ),
     );
   }
 
@@ -438,7 +511,7 @@ class _HomePageStates extends State<HomePage>{
       await _getCookie();
       var res = await http.get(_url+'home',headers: {
         'Content-type': 'application/json; charset=UTF-8',
-        'cookie' : _cookie
+        'cookie' : _chatData.getCookie
       });
       var data = json.decode(res.body);
       if(data['status']!=_isLoggedIn)
@@ -464,46 +537,18 @@ class _HomePageStates extends State<HomePage>{
 
 }
 
-class ChatViewStateLess extends StatelessWidget{
-  int _uid=0,_pid=0;
-  String _name='';
-  var _cookie,_callback;
-  ChatViewStateLess(int pid,int id,String name,cookie,callback){
-    _pid = pid;
-    _uid = id;
-    _name = name;
-    _cookie = cookie;
-    _callback = callback;
-  }
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.green,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: ChatView(_pid,_uid,_name,_cookie,_callback),
-    );
-  }
-
-}
-
 
 class ChatView extends StatefulWidget{
-  int _uid,_pid;String _name='';var _callback;
-  var _cookie;
-  ChatView(int pid,int uid,String name, cookie, callback, {Key key}) : _pid=pid,_uid=uid,_name=name,_cookie = cookie,_callback = callback,super(key: key);
+  ChatData _chatData = ChatData();
+  ChatView(ChatData chatData ,{Key key}) : _chatData = chatData,super(key: key);
   @override
-  _ChatViewStates createState() => _ChatViewStates(_pid,_uid,_name , _cookie , _callback);
+  _ChatViewStates createState() => _ChatViewStates(_chatData);
 }
 
 class _ChatViewStates extends State<ChatView>{
-  var _url = inProduction ? 'http://192.168.43.148:3001/' :'http://10.0.2.2:3001/';
-  int _uid,_pid;String _name='',_pName;
+  var _url = inProduction ? 'server address' :'http://10.0.2.2:3001/';
   var _chats=[];
-  var _cookie,_callback;
+  ChatData _chatData = ChatData();
   double screenWidth ;
   TextEditingController _messaggeController = TextEditingController();
   ScrollController _scrollController = ScrollController();
@@ -511,40 +556,30 @@ class _ChatViewStates extends State<ChatView>{
   _getChats()async{
     var res = await http.post(_url+'chats',
         body: json.encode(<String,dynamic>{
-          'to_id' : _uid
+          'to_id' : _chatData.getRoomId
         }),
         headers: {
       'Content-type': 'application/json; charset=UTF-8',
-      'cookie' : _cookie
+      'cookie' : _chatData.getCookie
     });
     var data = json.decode(res.body);
     setState(() {
       _chats =  data['chats'];
     });
-  }
-
-  _getUserData()async{
-    var res = await http.post(_url+'userdata',headers: {
-      'Content-type': 'application/json; charset=UTF-8',
-      'cookie' : _cookie
-    });
-    var data = json.decode(res.body);
-    setState(() {
-      _pName = data['name'];
-    });
+    return res;
   }
 
   sendMessage(String msg)async{
     var res = await http.post(_url+'sendmsg',
         body: json.encode(<String,dynamic>{
-          'to_id' : _uid,
-          'to_name' : _name,
-          'my_name' : _pName,
+          'to_id' : _chatData.getRoomId,
+          'to_name' : _chatData.getRoomName,
+          'my_name' : _chatData.getCurrentUserName,
           'msg' : msg,
         }),
         headers: {
           'Content-type': 'application/json; charset=UTF-8',
-          'cookie' : _cookie
+          'cookie' : _chatData.getCookie
         });
     var data = json.decode(res.body);
     setState(() {
@@ -555,13 +590,8 @@ class _ChatViewStates extends State<ChatView>{
     });
   }
 
-  _ChatViewStates(int pid,int uid,String name,cookie,callback){
-    _pid = pid;
-    _uid =uid;
-    _name = name;
-    _cookie = cookie;
-    _getUserData();
-    _callback = callback;
+  _ChatViewStates(chatData){
+    _chatData = chatData;
     Future.delayed(Duration(seconds: 2) , (){
       try{
         _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
@@ -597,7 +627,7 @@ class _ChatViewStates extends State<ChatView>{
 
   messageView(data){
     return Align(
-      alignment: data['to_id']==_uid ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: data['to_id']==_chatData.getRoomId ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         constraints: BoxConstraints(maxWidth: screenWidth*0.9),
         padding: EdgeInsets.all(10),
@@ -612,7 +642,7 @@ class _ChatViewStates extends State<ChatView>{
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              child: Text(data['to_id']==_uid ? 'You' : _name , style: TextStyle( fontWeight: FontWeight.bold , color: data['to_id']==_uid ? Color.fromRGBO(180, 0, 180, 1) : Color.fromRGBO(0, 180, 180, 1)),),
+              child: Text(data['to_id']==_chatData.getRoomId ? 'You' : _chatData.getRoomName , style: TextStyle( fontWeight: FontWeight.bold , color: data['to_id']==_chatData.getRoomId ? Color.fromRGBO(180, 0, 180, 1) : Color.fromRGBO(0, 180, 180, 1)),),
             ),
             Stack(
               alignment: Alignment.bottomRight,
@@ -628,6 +658,27 @@ class _ChatViewStates extends State<ChatView>{
           ],
         ),
       ),
+    );
+  }
+
+  messageListFutureBuilder(){
+    return FutureBuilder(
+      future: _getChats(),
+      builder: (context,chatsState){
+          if(chatsState.connectionState == ConnectionState.none || !chatsState.hasData || chatsState.hasError){
+            return Center(
+              child: CircularProgressIndicator(),
+            );
+          }else {
+            var chats = json.decode(chatsState.data.body)['chats'];
+            return ListView.builder(
+                    controller: _scrollController,
+                    itemCount: chats.length,
+                    itemBuilder: (context,i){
+                      return messageView(chats[i]);
+                  });
+          }
+    },
     );
   }
 
@@ -647,7 +698,8 @@ class _ChatViewStates extends State<ChatView>{
                     color: Colors.blue,
                   ),
                   onPressed: (){
-                    _callback();
+                    Get.back();
+                    //_callback();
                   },
                 ),
               )
@@ -655,32 +707,28 @@ class _ChatViewStates extends State<ChatView>{
         title: Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            IconButton(
+              IconButton(
               icon: Icon(
-                Icons.person_rounded,
+              Icons.person_rounded,
                 color: Colors.blue,
               ),
             ),
-            Text(_name,style: TextStyle(fontWeight: FontWeight.bold),),
+            Text(" "+_chatData.getRoomName,style: TextStyle(fontWeight: FontWeight.bold),),
           ],
         ) ,
         actions: [
-          IconButton(
-              icon: Icon(Icons.more_vert,color: Colors.blue,),
-              onPressed: null
-          )
+          PopupMenuButton(
+            itemBuilder: (context){
+              return ['Item1','Item2','Item3'].map((item) {return PopupMenuItem<String>(value:'Item1',child: Text(item),);}).toList();
+            },
+          ),
         ],
       ),
       body: Column(
         children: [
           Expanded(
             flex: 8,
-              child: ListView.builder(
-                controller: _scrollController,
-                itemCount: _chats.length,
-                  itemBuilder: (context,i){
-                return messageView(_chats[i]);
-              })
+              child: messageListFutureBuilder()
           ),
           Expanded(
             flex: 1,
