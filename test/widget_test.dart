@@ -13,7 +13,7 @@ import 'package:flutter_chat_app/main.dart';
 void main() {
   testWidgets('SignUp button click test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(MyApp());
+    /*await tester.pumpWidget(MyApp());
 
     // Verify that our counter starts at 0.
     expect(find.text('Login'), findsOneWidget);
@@ -33,7 +33,7 @@ void main() {
     expect(find.text('SignUp'), findsOneWidget);
     expect(find.text('Name'), findsOneWidget);
   });
-  /*testWidgets('Login test', (WidgetTester tester) async {
+  testWidgets('Login test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(MyApp());
 
@@ -44,14 +44,15 @@ void main() {
 
     // input email password
     await tester.tap(find.text('Email'));
-    await tester.enterText( find.widgetWithText( TextFormField , 'Email') , '');
+    await tester.enterText( find.widgetWithText( TextFormField , 'Email') , 'new@gmail.com');
     //await tester.pump();
     await tester.tap(find.text('Password'));
-    await tester.enterText( find.widgetWithText( TextFormField , 'Password') , '');
+    await tester.enterText( find.widgetWithText( TextFormField , 'Password') , 'newpass');
     await tester.tap(find.widgetWithText( TextButton, 'Login') );
-    //await tester.pump();
+
+    await tester.pump();
 
     // checking if homepage appeared
-    //expect(find.text('new'), findsOneWidget);
-  });*/
+    //expect(find.text('new'), findsOneWidget);*/
+  });
 }

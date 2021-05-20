@@ -2,6 +2,12 @@ class ChatData{
   String _currentUserName='',_roomName='';
   int _currentUserId,_roomId;
   var _cookie = '';
+  var _token = '';
+
+  set setToken(token){
+    this._token = token;
+  }
+
   set currentUserId (int userId){
     this._currentUserId = userId;
   }
@@ -18,6 +24,7 @@ class ChatData{
     this._cookie = cookie;
   }
 
+  get getToken => _token;
   get getCookie => _cookie;
   get getCurrentUserId => _currentUserId;
   get getCurrentUserName => _currentUserName;
